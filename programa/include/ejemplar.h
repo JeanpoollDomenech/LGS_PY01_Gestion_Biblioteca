@@ -9,7 +9,7 @@ typedef enum {
 
 /*
  * representa un ejemplar fisico individual de un Libro del catalogo
- * se relaciona con Libro por "nombre_libro" (la unicidad del catalogo)
+ * se relaciona con Libro por nombre_libro (la unicidad del catalogo)
  */
 typedef struct {
     int id;
@@ -30,7 +30,7 @@ void guardar_ejemplares(const Ejemplar *ejemplares, int cantidad);
 int siguiente_id_ejemplar(const Ejemplar *ejemplares, int cantidad);
 
 /*
- * genera "cantidad_nueva" ejemplares nuevos para un libro (todos EJEMPLAR_DISPONIBLE)
+ * genera cantidad_nueva ejemplares nuevos para un libro (todos EJEMPLAR_DISPONIBLE)
  * Entradas: nombre del libro, cantidad a generar, ejemplares existentes (para calcular ids sin colisiones)
  * Salidas: arreglo dinamico con los ejemplares nuevos generados
  * Objetivo: soportar la generacion de ejemplares al cargar/ampliar el catalogo
