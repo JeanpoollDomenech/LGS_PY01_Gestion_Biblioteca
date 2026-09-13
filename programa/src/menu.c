@@ -13,9 +13,10 @@
 #include "../include/estadisticas.h"
 
 /*
- * tamano de buffer para leer una fecha escrita por el usuario con fgets
- * Debe ser mayor que LONGITUD_FECHA si el buffer fuera del tamano exacto de "YYYY-MM-DD", fgets llenaria el buffer sin dejar espacio para el \n final,
- * que quedaria pendiente en stdin y desalinearia la siguiente lectura
+ * tamano de buffer para leer una fecha escrita por el usuario con fgets.
+ * Debe ser mayor que LONGITUD_FECHA: si el buffer fuera del tamano exacto de
+ * "YYYY-MM-DD", fgets llenaria el buffer sin dejar espacio para el '\n' final,
+ * que quedaria pendiente en stdin y desalinearia la siguiente lectura.
  */
 #define TAM_ENTRADA_FECHA 32
 
@@ -267,7 +268,7 @@ static void accion_vencimientos(void) {
 }
 
 /*
- * pide un modo de comparacion de texto (contiene/exacta) para un campo
+ * pide un modo de comparacion de texto ("contiene"/"exacta") para un campo
  * de la busqueda avanzada; se usa solo si el campo no viene vacio
  */
 static ModoTexto pedir_modo_texto(const char *nombre_campo) {
@@ -392,7 +393,9 @@ static void accion_prestamo(void) {
 
     int cantidad_prestamos = 0;
     Prestamo *prestamos = leer_prestamos(&cantidad_prestamos);
-    Prestamo comprobante = crear_prestamo(&prestamos, &cantidad_prestamos, usuario_id, fecha_inicio, fecha_entrega, ids_disponibles, cantidad_disponibles);
+    Prestamo comprobante = crear_prestamo(&prestamos, &cantidad_prestamos, usuario_id,
+                                          fecha_inicio, fecha_entrega,
+                                          ids_disponibles, cantidad_disponibles);
     guardar_prestamos(prestamos, cantidad_prestamos);
 
     printf("\n--- Comprobante de prestamo ---\n");
@@ -403,7 +406,8 @@ static void accion_prestamo(void) {
     printf("Ejemplares prestados: ");
     for (int i = 0; i < cantidad_disponibles; i++) {
         int indice = buscar_ejemplar_por_id(ejemplares, cantidad_ejemplares, ids_disponibles[i]);
-        printf("%d (%s)%s", ids_disponibles[i], ejemplares[indice].nombre_libro, (i < cantidad_disponibles - 1) ? ", " : "\n");
+        printf("%d (%s)%s", ids_disponibles[i], ejemplares[indice].nombre_libro,
+               (i < cantidad_disponibles - 1) ? ", " : "\n");
     }
 
     liberar_prestamos(prestamos, cantidad_prestamos);
@@ -443,7 +447,9 @@ static void accion_devolucion(void) {
     }
 
     int entrega_tardia = 0;
-    double monto = calcular_monto_devolucion(prestamos[indice].fecha_inicio, prestamos[indice].fecha_entrega_esperada, fecha_devolucion, &entrega_tardia);
+    double monto = calcular_monto_devolucion(prestamos[indice].fecha_inicio,
+                                              prestamos[indice].fecha_entrega_esperada,
+                                              fecha_devolucion, &entrega_tardia);
 
     prestamos[indice].fecha_devolucion = strdup(fecha_devolucion);
     prestamos[indice].estado = PRESTAMO_FINALIZADO;
@@ -456,7 +462,8 @@ static void accion_devolucion(void) {
     int cantidad_ejemplares = 0;
     Ejemplar *ejemplares = leer_ejemplares(&cantidad_ejemplares);
     for (int j = 0; j < prestamos[indice].cantidad_ejemplares; j++) {
-        int idx = buscar_ejemplar_por_id(ejemplares, cantidad_ejemplares, prestamos[indice].ids_ejemplares[j]);
+        int idx = buscar_ejemplar_por_id(ejemplares, cantidad_ejemplares,
+                                          prestamos[indice].ids_ejemplares[j]);
         if (idx != -1) {
             ejemplares[idx].estado = EJEMPLAR_DISPONIBLE;
         }
