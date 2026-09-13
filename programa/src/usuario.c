@@ -1,18 +1,78 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../include/usuario.h"
+#include "../include/constantes.h"
+#include "../include/persistencia.h"
+#include "cjson/cJSON.h"
 
 Usuario *leer_usuarios(int *cantidad) {
-    /* lunes 31 integrar cJSON para leer data/usuarios.json */
     *cantidad = 0;
-    return NULL;
+
+    char *contenido = leer_archivo_completo(ARCHIVO_USUARIOS);
+    if (contenido == NULL) {
+        return NULL;
+    }
+
+    cJSON *raiz = cJSON_Parse(contenido);
+    free(contenido);
+    if (raiz == NULL || !cJSON_IsArray(raiz)) {
+        cJSON_Delete(raiz);
+        return NULL;
+    }
+
+    int total = cJSON_GetArraySize(raiz);
+    if (total == 0) {
+        cJSON_Delete(raiz);
+        return NULL;
+    }
+
+    Usuario *usuarios = malloc(sizeof(Usuario) * (size_t)total);
+    if (usuarios == NULL) {
+        cJSON_Delete(raiz);
+        return NULL;
+    }
+
+    int agregados = 0;
+    for (int i = 0; i < total; i++) {
+        cJSON *item = cJSON_GetArrayItem(raiz, i);
+        cJSON *jid = cJSON_GetObjectItemCaseSensitive(item, "identificacion");
+        cJSON *jnombre = cJSON_GetObjectItemCaseSensitive(item, "nombre");
+        cJSON *jdireccion = cJSON_GetObjectItemCaseSensitive(item, "direccion");
+
+        if (!cJSON_IsString(jid) || !cJSON_IsString(jnombre) || !cJSON_IsString(jdireccion)) {
+            continue; /* registro corrupto, se omite */
+        }
+
+        usuarios[agregados].identificacion = strdup(jid->valuestring);
+        usuarios[agregados].nombre = strdup(jnombre->valuestring);
+        usuarios[agregados].direccion = strdup(jdireccion->valuestring);
+        agregados++;
+    }
+
+    cJSON_Delete(raiz);
+    *cantidad = agregados;
+    return usuarios;
 }
 
 void guardar_usuarios(const Usuario *usuarios, int cantidad) {
-    (void)usuarios;
-    (void)cantidad;
-    /* lunes 31 integrar cJSON para escribir data/usuarios.json */
+    cJSON *raiz = cJSON_CreateArray();
+
+    for (int i = 0; i < cantidad; i++) {
+        cJSON *item = cJSON_CreateObject();
+        cJSON_AddStringToObject(item, "identificacion", usuarios[i].identificacion);
+        cJSON_AddStringToObject(item, "nombre", usuarios[i].nombre);
+        cJSON_AddStringToObject(item, "direccion", usuarios[i].direccion);
+        cJSON_AddItemToArray(raiz, item);
+    }
+
+    char *texto = cJSON_Print(raiz);
+    if (texto != NULL) {
+        escribir_archivo(ARCHIVO_USUARIOS, texto);
+        free(texto);
+    }
+    cJSON_Delete(raiz);
 }
 
 int buscar_usuario(const Usuario *usuarios, int cantidad, const char *identificacion) {
@@ -26,32 +86,69 @@ int buscar_usuario(const Usuario *usuarios, int cantidad, const char *identifica
 
 int crear_usuario(Usuario **usuarios, int *cantidad,
                    const char *identificacion, const char *nombre, const char *direccion) {
-    (void)usuarios;
-    (void)cantidad;
-    (void)identificacion;
-    (void)nombre;
-    (void)direccion;
-    /* lunes 31 validar unicidad + realloc del arreglo + insertar */
-    return 0;
+    if (buscar_usuario(*usuarios, *cantidad, identificacion) != -1) {
+        return 0; /* ya existe: se viola la unicidad por identificacion */
+    }
+
+    Usuario *ampliado = realloc(*usuarios, sizeof(Usuario) * (size_t)(*cantidad + 1));
+    if (ampliado == NULL) {
+        return 0;
+    }
+    *usuarios = ampliado;
+
+    (*usuarios)[*cantidad].identificacion = strdup(identificacion);
+    (*usuarios)[*cantidad].nombre = strdup(nombre);
+    (*usuarios)[*cantidad].direccion = strdup(direccion);
+    (*cantidad)++;
+
+    return 1;
 }
 
 int modificar_usuario(Usuario *usuarios, int cantidad, const char *identificacion,
                        const char *nuevo_nombre, const char *nueva_direccion) {
-    (void)usuarios;
-    (void)cantidad;
-    (void)identificacion;
-    (void)nuevo_nombre;
-    (void)nueva_direccion;
-    /* lunes 31 */
-    return 0;
+    int indice = buscar_usuario(usuarios, cantidad, identificacion);
+    if (indice == -1) {
+        return 0;
+    }
+
+    if (nuevo_nombre != NULL && strlen(nuevo_nombre) > 0) {
+        free(usuarios[indice].nombre);
+        usuarios[indice].nombre = strdup(nuevo_nombre);
+    }
+    if (nueva_direccion != NULL && strlen(nueva_direccion) > 0) {
+        free(usuarios[indice].direccion);
+        usuarios[indice].direccion = strdup(nueva_direccion);
+    }
+
+    return 1;
 }
 
 int eliminar_usuario(Usuario **usuarios, int *cantidad, const char *identificacion) {
-    (void)usuarios;
-    (void)cantidad;
-    (void)identificacion;
-    /* lunes 31 la validacion de "sin prestamos asociados" se hace en la capa de menu, llamando primero a usuario_tiene_prestamos() */
-    return 0;
+    int indice = buscar_usuario(*usuarios, *cantidad, identificacion);
+    if (indice == -1) {
+        return 0;
+    }
+
+    free((*usuarios)[indice].identificacion);
+    free((*usuarios)[indice].nombre);
+    free((*usuarios)[indice].direccion);
+
+    for (int i = indice; i < *cantidad - 1; i++) {
+        (*usuarios)[i] = (*usuarios)[i + 1];
+    }
+    (*cantidad)--;
+
+    if (*cantidad > 0) {
+        Usuario *reducido = realloc(*usuarios, sizeof(Usuario) * (size_t)(*cantidad));
+        if (reducido != NULL) {
+            *usuarios = reducido;
+        }
+    } else {
+        free(*usuarios);
+        *usuarios = NULL;
+    }
+
+    return 1;
 }
 
 void mostrar_usuarios(const Usuario *usuarios, int cantidad) {
